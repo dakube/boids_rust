@@ -110,7 +110,7 @@ impl MainState {
                     x: point.x,
                     y: point.y,
                 },
-                2.0,    // Radius of the circle (adjust size as needed)
+                self.config.boids_config.protected_range / 2.0, // Radius of the circle (adjust size as needed)
                 0.1,    // Tolerance (lower means smoother circle)
                 *color, // Color of the circle
             )?; // The '?' handles potential errors during mesh building
