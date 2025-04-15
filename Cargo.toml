@@ -1,11 +1,12 @@
 [package]
-name = "boids_rust"
-version = "0.1.0"
+name = "boids_rust_par"
+version = "0.1.2"
 edition = "2024"
+authors = ["Dakube <dakube@gmail.com>"]
+description = "A Boids flocking simulation implemented in Rust with ggez."
 
 [dependencies]
 ggez = "0.9.3"
-# glam = "0.27.0"
 kdtree = "0.7.0"
 rand = "0.9.0"
 serde = { version = "1.0.219", features = ["derive"] }
