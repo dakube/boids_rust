@@ -1,21 +1,22 @@
 resolution:
-  x: 1024
-  y: 768
+  x: 1280
+  y: 720
 
 position:
-  x: 100
-  y: 100
+  x: 0
+  y: 0
 
-boids: 500
+boids: 1500
 
 boids_config:
-  protected_range: 8.0
-  visible_range: 40.0
-  avoidfactor: 1.0
-  matchingfactor: 0.002
-  centeringfactor: 0.0005
-  turnfactor: 1.0
-  margin: 30.0
-  maxspeed: 2.0
-  minspeed: 0.2
-  dt: 1.0
+  protected_range: 8.0 # Repulsion distance
+  visible_range: 32.0 # neighbor search distance
+  avoidfactor: 4.5 # Avoidance force
+  matchingfactor: 0.005 # Conformity influence from neighbors
+  centeringfactor: 0.0005 # Mass center influence
+  turnfactor: 3.0 # margin escape force
+  margin: 10.0 # Distance from border to turn back
+  maxspeed: 3.0 # Maximum speed ( in px per frame )
+  minspeed: 0.2 # Minimum speed
+  dt: 1.0 # delta time, time scale multiplier (1.0 = normal, < 1 = slow time, > 1 accelerate time)
+  scale: true
