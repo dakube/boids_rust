@@ -33,6 +33,7 @@ pub struct BoidsConfig {
     pub maxspeed: f32,
     pub minspeed: f32,
     pub dt: f32,
+    pub scale: bool,
 }
 
 // The top-level config struct

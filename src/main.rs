@@ -99,6 +99,12 @@ impl MainState {
 
         // Create a new mesh builder for points
         let mut mesh_builder = graphics::MeshBuilder::new();
+        let size: f32;
+        if self.config.boids_config.scale {
+            size = self.config.boids_config.protected_range / 2.0;
+        } else {
+            size = 2.0;
+        }
 
         // Add each point with its corresponding color
         for (point, color) in points.iter().zip(colors.iter()) {
@@ -110,7 +116,7 @@ impl MainState {
                     x: point.x,
                     y: point.y,
                 },
-                self.config.boids_config.protected_range / 2.0, // Radius of the circle (adjust size as needed)
+                size,   // Radius of the circle (adjust size as needed)
                 0.1,    // Tolerance (lower means smoother circle)
                 *color, // Color of the circle
             )?; // The '?' handles potential errors during mesh building
@@ -240,12 +246,10 @@ pub fn main() -> GameResult<()> {
     ); // Log attempt
 
     // --- Build ggez context and window ---
-    let (mut ctx, event_loop) = ContextBuilder::new("boids_simulation", "YourName")
+    let (mut ctx, event_loop) = ContextBuilder::new("boids_simulation", "Dakube")
         // Configure window settings based on loaded config
         .window_setup(
-            WindowSetup::default()
-                .title("Boids Simulation (Rust + ggez)")
-                .vsync(true), // Enable vsync
+            WindowSetup::default().title("Boids Simulation").vsync(true), // Enable vsync
         )
         .window_mode(
             WindowMode::default()
