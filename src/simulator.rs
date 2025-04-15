@@ -6,6 +6,7 @@ use ggez::glam::Vec2; // Use glam::Vec2 for positions
 use kdtree::distance::squared_euclidean; // Use squared Euclidean distance for KDTree
 use kdtree::KdTree; // Import the KDTree structure
 use rand::Rng; // Import Rng for random placement
+use rayon::prelude::*; // Import rayon for parallel iterators
 
 use crate::boids::Boid; // Import the Boid struct
 use crate::config::BoidsConfig; // Import the boid configuration
@@ -84,41 +85,51 @@ impl BoidSimulator {
         // 1. Rebuild the KDTree with current boid positions
         self.build_kdtree();
 
-        // 2. Calculate velocity changes for all boids
-        // We store the changes temporarily to avoid modifying boids while iterating
-        let mut velocity_changes: Vec<Vec2> = Vec::with_capacity(self.boids.len());
+        // --- Parallel Calculation of Velocity Changes ---
+        // Use rayon's par_iter to process boids in parallel
+        // We collect the results into a new vector
+        // Need to capture necessary data by reference or copy for th eclosure
+        let config = &self.config; // Immutable borrow for config
+        let screen_dims = self.screen_dims; // Copy screen_dims
+        let kdtree = &self.kdtree; // Immutable borrow for kdtree
+        let boids_ref = &self.boids; // Immutable borrow of boids vector for neighbor lookup
 
-        for i in 0..self.boids.len() {
-            let current_boid = &self.boids[i];
-            let current_pos_arr = [current_boid.pos.x, current_boid.pos.y];
+        let velocity_changes: Vec<Vec2> = self
+            .boids
+            .par_iter() // Create parallel iterators
+            .enumerate() // Get index along with boid reference
+            .map(|(_i, current_boid)| {
+                // Process each boid in parallel
+                let current_pos_arr = [current_boid.pos.x, current_boid.pos.y];
 
-            // Find neighbors within the visible range using the KDTree
-            // query_ball_point equivalent: find all points within a squared radius
-            let visible_range_sq = self.config.visible_range * self.config.visible_range;
-            let neighbor_indices_with_dist = self
-                .kdtree
-                .within(&current_pos_arr, visible_range_sq, &squared_euclidean)
-                .unwrap_or_default(); // Handle potential errors gracefully
+                // Find neighbors using the shared KDTree ( read-only )
+                let visible_range_sq = config.visible_range * config.visible_range;
+                // Querying the KDTree should be thread safe for read
+                let neighbor_indices_with_dist = kdtree
+                    .within(&current_pos_arr, visible_range_sq, &squared_euclidean)
+                    .unwrap_or_default();
 
-            // Collect references to the actual neighbor Boid structs, excluding self
-            let neighbors: Vec<&Boid> = neighbor_indices_with_dist
-                .iter()
-                // Fix for Rust 2024 pattern matching: Match the reference and copy the index.
-                .map(|&(_dist_sq, &index)| &self.boids[index])
-                // Filter out the boid itself (where neighbor id == current boid id)
-                .filter(|&neighbor| neighbor.id != current_boid.id)
-                .collect();
+                // Collect references to neighbors using the shared boids vector ( read-only access )
+                let neightbors: Vec<&Boid> = neighbor_indices_with_dist
+                    .iter()
+                    .map(|&(_dist_sq, &index)| &boids_ref[index])
+                    .filter(|&neighbor| neighbor.id != current_boid.id)
+                    .collect();
 
-            // Calculate the velocity change for the current boid based on its neighbors
-            let delta_v =
-                current_boid.calculate_velocity_change(&neighbors, &self.config, self.screen_dims);
-            velocity_changes.push(delta_v); // Store the calculated change
-        }
+                // Calculate velocity change for this boid
+                current_boid.calculate_velocity_change(&neightbors, config, screen_dims)
+            })
+            .collect(); // Collect the calculated Vec2 changes into a new vector
 
-        // 3. Apply updates to all boids
-        // Now iterate again and apply the pre-calculated changes
-        for (i, boid) in self.boids.iter_mut().enumerate() {
-            boid.apply_update(velocity_changes[i], &self.config);
-        }
+        // --- Parallel Application of Updates ---
+        // Use par_iter_mut to modify boids in parallel.
+        // Zip the mutable boid iterator with teh calculated velocity change
+        self.boids
+            .par_iter_mut() // Mutable parallel iterator over boids
+            .zip(velocity_changes.par_iter()) // Zip with parallel iterator over velocity changes
+            .for_each(|(boid, &delta_v)| {
+                // Process each (boid, delta_v) pair in parallel
+                boid.apply_update(delta_v, config);
+            })
     }
 }
