@@ -58,10 +58,12 @@ impl Boid {
         dir_to_color(self.vel.x, self.vel.y, -config.maxspeed, config.maxspeed)
     }
 
+    /* REMOVED UNUSED
     /// Returns the boid's position as integer coordinates (suitable for drawing)
     pub fn get_pos_int(&self) -> (i32, i32) {
         (self.pos.x as i32, self.pos.y as i32)
     }
+    */
 
     /// Calculates the necessary velocity adjustments based on neighbors and environment.
     /// This implements the core Boids rules: Separation, Alignemnt, Cohesion, and Boundary Avoidance.
@@ -123,6 +125,9 @@ impl Boid {
             // --- Cohesion ---
             // Calculate the center of mass of neighbors
             avg_pos *= inv_neighbor_count;
+            let cohesion_dv = (avg_pos - self.pos) * config.centeringfactor;
+            delta_v += cohesion_dv;
+
             // Calculate vector to match the average velocity
             let alignment_dv = (avg_vel - self.vel) * config.matchingfactor;
             delta_v += alignment_dv; // Add alignamnet force

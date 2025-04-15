@@ -7,11 +7,11 @@ use ggez::conf::{WindowMode, WindowSetup}; // ggez configuration for window setu
                                            // Updated imports for ggez 0.9 event handling and input
 use ggez::event::{self, EventHandler};
 use ggez::glam::Vec2; // Use ggez's re-exported glam::Vec2 for compatibility
-use ggez::graphics::{self, Canvas, Color, DrawMode, DrawParam, Mesh, MeshData}; // ggez graphics types, added Canvas
-use ggez::input::keyboard::{KeyCode, KeyInput, KeyMods}; // Correct path for KeyCode/KeyMods
+use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh}; // ggez graphics types, added Canvas
+use ggez::input::keyboard::{KeyCode, KeyInput}; // Correct path for KeyCode/KeyMods
 use ggez::mint; // Import mint Point2 type used by graphics functions
 use ggez::{Context, ContextBuilder, GameResult}; // ggez core types
-use rand::rngs::ThreadRng; // Use ThreadRng for random number generation
+                                                 // use rand::rngs::ThreadRng; // Use ThreadRng for random number generation
 use rand::Rng; // Import the Rng trait
 
 // --- Import local modules ---
@@ -31,9 +31,9 @@ const CONFIG_PATH: &str = "boids.yaml"; // Path to the configuration file
 struct MainState {
     simulator: BoidSimulator, // The boid simulation engine
     config: Config,           // Loaded configuration
-    rng: ThreadRng,           // Random number generator
-    boid_mesh: Option<Mesh>,  // Pre-built mesh for drawing boids efficiently
-    show_trails: bool,        // Flag to control background clearing (trails effect)
+    // rng: ThreadRng,           // Random number generator
+    boid_mesh: Option<Mesh>, // Pre-built mesh for drawing boids efficiently
+    show_trails: bool,       // Flag to control background clearing (trails effect)
 }
 
 impl MainState {
@@ -68,7 +68,7 @@ impl MainState {
         let mut state = MainState {
             simulator,
             config,
-            rng,
+            // rng,
             boid_mesh: None,   // Mesh will be built in the first update/draw
             show_trails: true, // Start with trails enabled
         };
