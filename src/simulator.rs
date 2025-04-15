@@ -2,7 +2,7 @@
 // Manages the collection of Boids, performs neighbor searches using KDTree,
 // and orchestrates the simulation update step.
 
-use glam::Vec2; // Use glam::Vec2 for positions
+use ggez::glam::Vec2; // Use glam::Vec2 for positions
 use kdtree::distance::squared_euclidean; // Use squared Euclidean distance for KDTree
 use kdtree::KdTree; // Import the KDTree structure
 use rand::Rng; // Import Rng for random placement

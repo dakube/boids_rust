@@ -1,16 +1,18 @@
 // src/main.rs
-// The main entry point for the Boids simulation application
+// The main entry point for the Boids simulation application.
 // Sets up ggez, loads configuration, initializes the simulation state,
 // and runs the main game loop.
 
-use ggez::conf::{WindowMode, WindowSetup};
-use ggez::event::{self, EventHandler, KeyCode, KeyMods};
-use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh};
-use ggez::timer;
-use ggez::{Context, ContextBuilder, GameResult};
-use glam::Vec2;
-use rand::rngs::ThreadRng;
-use rand::Rng;
+use ggez::conf::{WindowMode, WindowSetup}; // ggez configuration for window setup
+                                           // Updated imports for ggez 0.9 event handling and input
+use ggez::event::{self, EventHandler};
+use ggez::glam::Vec2; // Use ggez's re-exported glam::Vec2 for compatibility
+use ggez::graphics::{self, Canvas, Color, DrawMode, DrawParam, Mesh, MeshData}; // ggez graphics types, added Canvas
+use ggez::input::keyboard::{KeyCode, KeyInput, KeyMods}; // Correct path for KeyCode/KeyMods
+use ggez::mint; // Import mint Point2 type used by graphics functions
+use ggez::{Context, ContextBuilder, GameResult}; // ggez core types
+use rand::rngs::ThreadRng; // Use ThreadRng for random number generation
+use rand::Rng; // Import the Rng trait
 
 // --- Import local modules ---
 mod boids;
@@ -18,36 +20,36 @@ mod color_utils;
 mod config;
 mod simulator;
 
-use crate::config::{load_config, Config};
-use crate::simulator::BoidSimulator;
+use crate::config::{load_config, Config}; // Import config loading function and struct
+use crate::simulator::BoidSimulator; // Import the BoidSimulator
 
 // --- Constants ---
-const CONFIG_PATH: &str = "boids.yaml";
+const CONFIG_PATH: &str = "boids.yaml"; // Path to the configuration file
 
 // --- Main Game State Struct ---
 
 struct MainState {
-    simulator: BoidSimulator,
-    config: Config,
-    rng: ThreadRng,
-    boid_mesh: Option<Mesh>,
-    show_trails: bool,
+    simulator: BoidSimulator, // The boid simulation engine
+    config: Config,           // Loaded configuration
+    rng: ThreadRng,           // Random number generator
+    boid_mesh: Option<Mesh>,  // Pre-built mesh for drawing boids efficiently
+    show_trails: bool,        // Flag to control background clearing (trails effect)
 }
 
 impl MainState {
     /// Creates a new MainState instance, initializing the simulation.
     fn new(ctx: &mut Context, config: Config) -> GameResult<MainState> {
-        let mut rng = rand::rng();
+        let mut rng = rand::rng(); // Initialize the random number generator
 
         // Create the BoidSimulator instance
         let mut simulator = BoidSimulator::new(
-            config.boids_config,
-            (config.resolution.x, config.resolution.y),
+            config.boids_config,                        // Pass boid-specific config
+            (config.resolution.x, config.resolution.y), // Pass screen dimensions
         );
 
         // --- Initialize Boids ---
         // Calculate spawn area boundaries based on margins from config
-        let margin_x = config.resolution.x / 8.0;
+        let margin_x = config.resolution.x / 8.0; // Similar to Python script's border_distance
         let margin_y = config.resolution.y / 8.0;
         let x_min = margin_x;
         let x_max = config.resolution.x - margin_x;
@@ -58,16 +60,17 @@ impl MainState {
         for _ in 0..config.boids {
             let x = rng.random_range(x_min..x_max);
             let y = rng.random_range(y_min..y_max);
+            // Use ggez::glam::Vec2 here
             simulator.add_boid(Vec2::new(x, y), &mut rng);
         }
 
-        // initialize the main state
+        // Initialize the main state
         let mut state = MainState {
             simulator,
             config,
             rng,
             boid_mesh: None,   // Mesh will be built in the first update/draw
-            show_trails: true, // STart with trails enabled
+            show_trails: true, // Start with trails enabled
         };
 
         // Build the initial mesh for drawing
@@ -76,15 +79,16 @@ impl MainState {
         Ok(state)
     }
 
-    /// Rebuilds the mesh used to draw all boids
-    /// This is more efficiant than drawing each boid individually every frame
+    /// Rebuilds the mesh used to draw all boids.
+    /// This is more efficient than drawing each boid individually every frame.
     fn rebuild_boid_mesh(&mut self, ctx: &mut Context) -> GameResult<()> {
         if self.simulator.boids.is_empty() {
-            self.boid_mesh = None; // No mesh if no boid
+            self.boid_mesh = None; // No mesh if no boids
             return Ok(());
         }
 
         // Collect points and colors for the mesh
+        // Ensure points are ggez::glam::Vec2
         let points: Vec<Vec2> = self.simulator.boids.iter().map(|b| b.pos).collect();
         let colors: Vec<Color> = self
             .simulator
@@ -98,85 +102,102 @@ impl MainState {
 
         // Add each point with its corresponding color
         for (point, color) in points.iter().zip(colors.iter()) {
-            // Add a small circle of point for each boid
-            // Using a new_point is simpler but less flexible than MeshBuilder
-            // Let's use MeshBuilder to daw small circles
+            // Add a small circle or point for each boid
             mesh_builder.circle(
                 DrawMode::fill(), // Draw filled circles
-                *point,           // Position of the circle center
-                2.0,              // radius of the circle (adjust as needed)
-                0.1,              // Tolerance ( lower is smoother)
-                *color,           // color of circle
-            )?; // Handles errors
+                // Convert glam::Vec2 to mint::Point2 for the graphics function
+                mint::Point2 {
+                    x: point.x,
+                    y: point.y,
+                },
+                2.0,    // Radius of the circle (adjust size as needed)
+                0.1,    // Tolerance (lower means smoother circle)
+                *color, // Color of the circle
+            )?; // The '?' handles potential errors during mesh building
         }
 
-        // Build the final mesh from the mesh builder
-        self.boid_mesh = Some(mesh_builder.build(ctx)?);
+        // Build the mesh data first (doesn't require context, doesn't return Result)
+        let mesh_data = mesh_builder.build();
+        // Create the Mesh object from MeshData using the context (returns Result)
+        let mesh = Mesh::from_data(ctx, mesh_data);
+        self.boid_mesh = Some(mesh); // Store the built mesh
 
         Ok(())
     }
 }
 
-// --- Implement ggez EventHandler trait for MAinState ---
+// --- Implement ggez EventHandler trait for MainState ---
 
 impl EventHandler for MainState {
     /// Called to update the game state logic.
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        // Update the simulation stats move boids
+        // Update the simulation state (move boids, etc.)
         self.simulator.update();
 
         // Rebuild the mesh with the updated boid positions and colors
-        self.rebuild_boid_mesh((ctx)?);
+        // Fix: Correct use of '?' operator
+        self.rebuild_boid_mesh(ctx)?;
 
-        // Optional: print FPS to console
-        if timer::ticks(ctx) % 100 == 0 {
-            println!("FPS: {:.1}", timer::fps(ctx));
+        // Optional: Print FPS to console
+        // Fix: Use ctx.time.ticks() and ctx.time.fps()
+        if ctx.time.ticks() % 100 == 0 {
+            println!("FPS: {:.1}", ctx.time.fps());
         }
+
         Ok(())
     }
+
     /// Called to draw the current game state.
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        // --- Clear the screen ---
-        if self.show_trails {
-            // Clear with a semi-transparent black for a trailing effect
-            graphics::clear(ctx, Color::new(0.0, 0.0, 0.0, 0.25)); // Adjust alpha for trail length
-        } else {
-            // Clear completely with solid black
-            graphics::clear(ctx, Color::BLACK);
-        }
+        // --- Get a Canvas ---
+        // Graphics operations in ggez 0.9 are done on a Canvas
+        let mut canvas = graphics::Canvas::from_frame(
+            ctx,
+            if self.show_trails {
+                // Clear with a semi-transparent black for a trailing effect
+                Some(Color::new(0.0, 0.0, 0.0, 0.25)) // Adjust alpha for trail length
+            } else {
+                // Clear completely with solid black
+                Some(Color::BLACK)
+            },
+        );
 
         // --- Draw Boids ---
         // Draw the pre-built mesh if it exists
         if let Some(mesh) = &self.boid_mesh {
-            // Draw the mesh at the origin (0,0) with no rotation or scaling
-            graphics::draw(ctx, mesh, DrawParam::default())?;
+            // Fix: Draw using the canvas object
+            canvas.draw(mesh, DrawParam::default());
         }
 
         // --- Present the frame ---
-        // Display the drawn frame on the screen
-        graphics::present(ctx)?;
+        // Fix: Present the canvas
+        canvas.finish(ctx)?;
 
         // Yield the CPU briefly to avoid busy-waiting
-        ggez::timer::yield_now();
+        // timer::yield_now(); // yield_now is often not necessary with vsync/proper frame limiting
         Ok(())
     }
 
     /// Called when a keyboard key is pressed.
+    /// Fix: Updated signature for ggez 0.9 EventHandler
     fn key_down_event(
         &mut self,
         ctx: &mut Context,
-        keycode: KeyCode,
-        _keymods: KeyMods,
+        input: KeyInput, // Use KeyInput struct
         _repeat: bool,
-    ) {
-        match keycode {
+    ) -> GameResult<()> {
+        // Added GameResult return type
+        match input.keycode {
+            // Check keycode within KeyInput
             // Quit the application if 'Q' is pressed
-            KeyCode::Q => {
+            Some(KeyCode::Q) => {
+                // Keycode is an Option now
                 println!("Quitting application...");
-                event::quit(ctx);
+                // Fix: Use ctx.request_quit()
+                ctx.request_quit();
             }
             // Toggle trails effect if 'T' is pressed
-            KeyCode::T => {
+            Some(KeyCode::T) => {
                 self.show_trails = !self.show_trails;
                 println!(
                     "Trails toggled: {}",
@@ -185,6 +206,7 @@ impl EventHandler for MainState {
             }
             _ => {} // Ignore other key presses
         }
+        Ok(()) // Return Ok
     }
 }
 
@@ -207,7 +229,11 @@ pub fn main() -> GameResult<()> {
     // --- Set window position (Attempt using environment variable) ---
     // This might not work reliably across all platforms/ggez backends.
     let position_str = format!("{},{}", config.position.x, config.position.y);
-    std::env::set_var("SDL_VIDEO_WINDOW_POS", &position_str);
+    // Fix: Wrap unsafe call in unsafe block
+    // Note: This is generally safe at program startup before threads might access env vars.
+    unsafe {
+        std::env::set_var("SDL_VIDEO_WINDOW_POS", &position_str);
+    }
     println!(
         "Attempting to set window position via SDL_VIDEO_WINDOW_POS={}",
         position_str
@@ -220,7 +246,6 @@ pub fn main() -> GameResult<()> {
             WindowSetup::default()
                 .title("Boids Simulation (Rust + ggez)")
                 .vsync(true), // Enable vsync
-                              // .samples(NumSamples::Four) // Optional: Enable MSAA for smoother visuals
         )
         .window_mode(
             WindowMode::default()

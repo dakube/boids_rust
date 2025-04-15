@@ -1,8 +1,8 @@
 // src/color_utils.rs
 // Provides utility functions for converting boid velocity to color
 
+use ggez::glam::Vec2;
 use ggez::graphics::Color;
-use glam::Vec2;
 
 // --- Constants based on the Python script ---
 const SPEED_DENOMINATOR: f32 = 360.62447; // approx sqrt(2.0) * 255.0

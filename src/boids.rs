@@ -1,8 +1,8 @@
 // src/boids.rs
 // Define the Boids struct and its behavior ( movement rules updates).
 
+use ggez::glam::Vec2;
 use ggez::graphics::Color;
-use glam::Vec2;
 use rand::Rng;
 use uuid::Uuid;
 
