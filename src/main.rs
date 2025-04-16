@@ -9,7 +9,8 @@ use ggez::event::{self, EventHandler};
 use ggez::glam::Vec2; // Use ggez's re-exported glam::Vec2 for compatibility
 use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh}; // ggez graphics types, added Canvas
 use ggez::input::keyboard::{KeyCode, KeyInput}; // Correct path for KeyCode/KeyMods
-use ggez::mint; // Import mint Point2 type used by graphics functions
+use ggez::{mint, winit};
+// Import mint Point2 type used by graphics functions
 use ggez::{Context, ContextBuilder, GameResult}; // ggez core types
                                                  // use rand::rngs::ThreadRng; // Use ThreadRng for random number generation
 use rand::Rng; // Import the Rng trait
@@ -232,19 +233,6 @@ pub fn main() -> GameResult<()> {
         }
     };
 
-    // --- Set window position (Attempt using environment variable) ---
-    // This might not work reliably across all platforms/ggez backends.
-    let position_str = format!("{},{}", config.position.x, config.position.y);
-    // Fix: Wrap unsafe call in unsafe block
-    // Note: This is generally safe at program startup before threads might access env vars.
-    unsafe {
-        std::env::set_var("SDL_VIDEO_WINDOW_POS", &position_str);
-    }
-    println!(
-        "Attempting to set window position via SDL_VIDEO_WINDOW_POS={}",
-        position_str
-    ); // Log attempt
-
     // --- Build ggez context and window ---
     let (mut ctx, event_loop) = ContextBuilder::new("boids_simulation", "Dakube")
         // Configure window settings based on loaded config
@@ -255,10 +243,13 @@ pub fn main() -> GameResult<()> {
             WindowMode::default()
                 .dimensions(config.resolution.x, config.resolution.y)
                 .resizable(false) // Keep window non-resizable for simplicity
-                .borderless(false), // Set to true to mimic pygame.NOFRAME (might affect positioning)
+                .borderless(true), // Set to true to mimic pygame.NOFRAME (might affect positioning)
         )
-        .build()?; // Build the context and event loop
-
+        .build()?;
+    // --- Set Window position using ctx.gfx.set_window_position ---
+    let window_pos =
+        winit::dpi::PhysicalPosition::new(config.position.x as f32, config.position.y as f32);
+    ctx.gfx.set_window_position(window_pos)?;
     // --- Create and run the main state ---
     let state = MainState::new(&mut ctx, config)?;
     event::run(ctx, event_loop, state) // Start the ggez event loop
