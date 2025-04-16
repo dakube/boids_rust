@@ -161,13 +161,31 @@ impl EventHandler for MainState {
         let mut canvas = graphics::Canvas::from_frame(
             ctx,
             if self.show_trails {
-                // Clear with a semi-transparent black for a trailing effect
-                Some(Color::new(0.0, 0.0, 0.0, 0.25)) // Adjust alpha for trail length
+                None // Don't clear the screen when trails are enabled
+                     // Clear with a semi-transparent black for a trailing effect
+                     // Some(Color::new(0.0, 0.0, 0.0, 0.25)) // Adjust alpha for trail length
             } else {
                 // Clear completely with solid black
                 Some(Color::BLACK)
             },
         );
+        // When trails are enabled, draw a semi-transparent black rectangle over the entire screen
+        if self.show_trails {
+            // Create a rectangle covering the entire screen
+            let screen_rect =
+                graphics::Rect::new(0.0, 0.0, self.config.resolution.x, self.config.resolution.y);
+
+            // Draw a semi-transparent black rectangle
+            // Adjust alpha value to control trail lenght
+            let fade_mesh = Mesh::new_rectangle(
+                ctx,
+                DrawMode::fill(),
+                screen_rect,
+                Color::new(0.0, 0.0, 0.0, 0.1),
+            )?;
+
+            canvas.draw(&fade_mesh, DrawParam::default());
+        }
 
         // --- Draw Boids ---
         // Draw the pre-built mesh if it exists
