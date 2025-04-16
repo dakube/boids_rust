@@ -177,11 +177,12 @@ impl EventHandler for MainState {
 
             // Draw a semi-transparent black rectangle
             // Adjust alpha value to control trail lenght
+            let trails_lenght = self.config.boids_config.trails_len.max(0.0001).min(1.0);
             let fade_mesh = Mesh::new_rectangle(
                 ctx,
                 DrawMode::fill(),
                 screen_rect,
-                Color::new(0.0, 0.0, 0.0, 0.1),
+                Color::new(0.0, 0.0, 0.0, trails_lenght),
             )?;
 
             canvas.draw(&fade_mesh, DrawParam::default());

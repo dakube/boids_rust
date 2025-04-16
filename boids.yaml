@@ -20,3 +20,4 @@ boids_config:
   minspeed: 0.2 # Minimum speed
   dt: 1.0 # delta time, time scale multiplier (1.0 = normal, < 1 = slow time, > 1 accelerate time)
   scale: true
+  trails_len: 0.25
